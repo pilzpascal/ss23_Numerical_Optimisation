@@ -14,7 +14,11 @@ def get_local_minima_1d(f: sp.Function, which: str = 'min') -> np.ndarray:
     x = sp.symbols('x')
     diff = sp.diff(f, x)
     sec_diff = sp.diff(diff, x)
-    zeros = sp.solve(diff, x)
+    try:
+        zeros = sp.solve(diff, x)
+    except NotImplementedError as e:
+        raise NotImplementedError('The function cannot be solved using sympy', e)
+    zeros = [elem for elem in zeros if elem.is_real]
     if which == 'min':
         output = [elem for elem in zeros if sec_diff.evalf(subs={x: elem}) > 0]
     elif which == 'max':
@@ -49,6 +53,7 @@ def get_alpha(f: callable(np.ndarray),
 
 def plot_iterations(f: callable(float),
                     points: np.ndarray,
+                    true_min: np.ndarray,
                     directions: np.ndarray = None,
                     show_dir: bool = False,
                     show_path: bool = False,
@@ -60,6 +65,7 @@ def plot_iterations(f: callable(float),
 
     :param f: the numeric function from R^1 to R^1
     :param points: list of points of the shape (m,)
+    :param true_min: the true minimum
     :param directions: the direction taken at each iterate; shape is (m-1,)
     :param show_dir: whether to show the directions taken at each iterate. This is bugged, not recommended
     :param show_path: whether to plot or not to plot the path
@@ -83,9 +89,10 @@ def plot_iterations(f: callable(float),
 
         plt.title('Contour plot and iterates')
         func_y = np.apply_along_axis(f, 0, points)
-        ax.scatter(points, func_y, color='orange', label='iterates')
-        ax.scatter(points[0], func_y[0], color='green', marker='x', s=80, label='starting point')
-        ax.scatter(points[-1], func_y[-1], color='red', marker='x', s=80, label='end point')
+        ax.scatter(points, func_y, color='orange', s=15, label='iterates')
+        ax.scatter(points[0], func_y[0], color='blue', marker='x', s=80, label='starting point')
+        ax.scatter(points[-1], func_y[-1], color='green', marker='|', s=400, label='end point')
+        ax.scatter(true_min, f(true_min), color='red', marker='x', s=80, label='true minimum', alpha=0.7)
 
     elif points.shape[1] == 2:  # case of 2d function
         x_min = min(points[:, 0])
@@ -114,9 +121,10 @@ def plot_iterations(f: callable(float),
             ax.quiver(points[:-1, 0], points[:-1, 1], directions[:, 0], directions[:, 1])
 
         plt.title('Contour plot and iterates')
-        ax.scatter(points[:, 0], points[:, 1], color='orange', label='iterates')
-        ax.scatter(points[0, 0], points[0, 1], color='green', marker='x', s=80, label='starting point')
-        ax.scatter(points[-1, 0], points[-1, 1], color='red', marker='x', s=80, label='end point')
+        ax.scatter(points[:, 0], points[:, 1], color='orange', s=10, label='iterates')
+        ax.scatter(points[0, 0], points[0, 1], color='blue', marker='x', s=80, label='starting point')
+        ax.scatter(points[-1, 0], points[-1, 1], color='green', marker='x', s=80, label='end point')
+        ax.scatter(true_min[0], true_min[1], color='red', marker='x', s=80, label='true minimum', alpha=0.7)
 
     else:   # not 1d or 2d
         raise ValueError('Given list of points is not 1d or 2d.')
@@ -130,32 +138,37 @@ def plot_iterations(f: callable(float),
 
 def print_output(f: callable(np.ndarray),
                  x: np.ndarray,
-                 local_minima: np.ndarray,
+                 local_minima_precise: np.ndarray,
                  p: np.ndarray = None,
                  alpha: np.ndarray = None,
-                 full: bool = False) -> None:
+                 full: bool = False) -> np.ndarray:
     """
     Prints the given arrays
     :param f: the function under investigation
     :param x: list of points
-    :param local_minima: list of local minima
+    :param local_minima_precise: list of local minima
     :param p: list of directions
     :param alpha: list of step sizes
     :param full: whether to print full list of points or only the last
     :return:
     """
     # this expression returns the nearest value in a numpy array to a certain given value
+    if local_minima_precise is None:
+        local_minima_precise = [0]
+    local_minima = [np.longfloat(elem) for elem in local_minima_precise]
     idx = (np.abs(local_minima - x[-1])).argmin()
-    minimum = float(local_minima[idx])
+    minimum = local_minima[idx]
 
     print('='*70)
     print()
-    print(f'Endpoint is {np.round(x[-1], 2)}, '
-          f'with a function value of {f(x[-1])} (euclidian norm of {np.linalg.norm(f(x[-1])):.4f}).')
+    print(f'Function value at endpoint {f(x[-1])} (euclidian norm of {np.linalg.norm(f(x[-1])):.4f}).')
     print(f'It took {len(x)-1} iterations.')
     print()
-    print(f'Precise endpoint: {x[-1]}')
-    print(f'Distance from true value: {np.format_float_scientific(np.linalg.norm(minimum - x[-1]), precision=6)}')
+    print(f'Precise endpoint:    {x[-1]}')
+    print(f'True value would be: {minimum}')
+    print(f'All local minima are {local_minima}')
+    print(f'(Precise local minima are: {local_minima_precise})')
+    print(f'Distance from last iterate to true value: {np.format_float_scientific(np.linalg.norm(minimum - x[-1]), precision=6)}')
     print()
     print('='*70)
     print()
@@ -166,3 +179,5 @@ def print_output(f: callable(np.ndarray),
         print(f'List of p: {p}')
     if alpha:
         print(f'List of alpha: {alpha}')
+
+    return np.array(minimum)

@@ -32,16 +32,19 @@ def newtons_method(f: callable(np.ndarray),
                    start_point: np.ndarray,
                    stop_crit: float = 1e-6) -> (np.ndarray, np.ndarray, np.ndarray):
 
-    grad_f = nd.Gradient(f)
-    hess_f = nd.Hessian(f)
+    if start_point.shape[0] > 1:
+        grad_f = nd.Gradient(f)
+        hess_f = nd.Hessian(f)
+    else:
+        grad_f = nd.Derivative(f)
+        hess_f = nd.Derivative(grad_f)
     x_list = [start_point]
     x_k = x_list[-1]
     p_list = list()
     alpha_list = list()
 
     while not (abs(grad_f(x_k)) < stop_crit).all():
-
-        p_k = np.linalg.solve(hess_f(x_k), -grad_f(x_k))
+        p_k = np.linalg.solve(hess_f(x_k).reshape(1, 1), (-grad_f(x_k)).reshape(1, 1))
         p_list.append(p_k)
 
         alpha = utils.get_alpha(f, x_k, p_k, grad_f)
