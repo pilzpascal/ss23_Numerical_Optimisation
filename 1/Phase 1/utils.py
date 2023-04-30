@@ -31,22 +31,26 @@ def get_local_minima_1d(f: sp.Function, which: str = 'min') -> np.ndarray:
 
 
 def get_alpha(f: callable(np.ndarray),
+              grad_f: callable,
               x_k: np.ndarray,
               p_k: np.ndarray,
-              grad_f) -> float:
+              start_a: np.longfloat = 1) -> float:
     """
     performs backtracking line search to find an admissible alpha
     :param f: function in question
+    :param grad_f: the gradient of the function in question
     :param x_k: current iterate
     :param p_k: chosen direction
-    :param grad_f: the gradient of the function in question
+    :param start_a: the initial alpha value at which to start searching
     :return: scalar alpha_k; how far to go along the direction p_k
     """
-    c = 0.5
+    c = 0.8
     rho = 0.9
 
-    alpha = np.longfloat(1)
-    while f(x_k + alpha * p_k) > f(x_k) + c * alpha * np.dot(grad_f(x_k), p_k):
+    alpha = start_a
+    val = f(x_k)
+    val_grad_pk_dot = c * grad_f(x_k) @ p_k
+    while f(x_k + alpha * p_k) > val + alpha * val_grad_pk_dot:
         alpha *= rho
     return alpha
 
@@ -138,26 +142,18 @@ def plot_iterations(f: callable(float),
 
 def print_output(f: callable(np.ndarray),
                  x: np.ndarray,
-                 local_minima_precise: np.ndarray,
                  p: np.ndarray = None,
                  alpha: np.ndarray = None,
-                 full: bool = False) -> np.ndarray:
+                 full: bool = False):
     """
     Prints the given arrays
     :param f: the function under investigation
     :param x: list of points
-    :param local_minima_precise: list of local minima
     :param p: list of directions
     :param alpha: list of step sizes
     :param full: whether to print full list of points or only the last
     :return:
     """
-    # this expression returns the nearest value in a numpy array to a certain given value
-    if local_minima_precise is None:
-        local_minima_precise = [0]
-    local_minima = [np.longfloat(elem) for elem in local_minima_precise]
-    idx = (np.abs(local_minima - x[-1])).argmin()
-    minimum = local_minima[idx]
 
     print('='*70)
     print()
@@ -179,5 +175,3 @@ def print_output(f: callable(np.ndarray),
         print(f'List of p: {p}')
     if alpha:
         print(f'List of alpha: {alpha}')
-
-    return np.array(minimum)

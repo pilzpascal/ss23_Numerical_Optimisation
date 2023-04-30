@@ -1,0 +1,7 @@
+(1) When trying to solve f(x)=-exp(-(x - 2)**2) using Newton's method and a starting point of x=0, we have the issue that the hessian (second derivative), f''(x)=-(4*x**2 - 16*x + 14) * exp(-(x - 2)**2) is not positive definite.
+
+(2) When trying to solve f(x)=x**3 - 3*x using Newton's method and a starting point of x=0, we have the issue that the hessian (second derivative) f''(x)=6*x is 0 at x=0, ad thus we cannot compute the inverse.
+
+Both (1) and (2) I believe could be solved via Newton's method with hessian modification (chapter 3.4).
+
+answer to (1) and (2): don't choose problems that have this issue
