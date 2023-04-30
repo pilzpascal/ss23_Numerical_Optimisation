@@ -41,7 +41,7 @@ def newtons_method(start_point: np.ndarray,
                    grad_f: callable,
                    hess_f: callable,
                    stop_crit: float = 1e-3,
-                   print_interval: int = 1) -> (np.ndarray, np.ndarray, np.ndarray):
+                   print_interval: int = False) -> (np.ndarray, np.ndarray, np.ndarray):
 
     x_list = [start_point]
     x_k = start_point
@@ -50,8 +50,9 @@ def newtons_method(start_point: np.ndarray,
     i = 0
 
     while norm(grad_f(x_k)) > stop_crit:
-        p_k = solve(hess_f(x_k).astype(float), (-grad_f(x_k).astype(float)))[0]
-        a_k = get_alpha(f, grad_f, x_k, p_k)
+        p_k = solve(hess_f(x_k).astype(float), (-grad_f(x_k).astype(float))).reshape(-1)
+        # a_k = get_alpha(f, grad_f, x_k, p_k)
+        a_k = 1
         x_k += a_k * p_k
 
         if print_interval and i % print_interval == 0:

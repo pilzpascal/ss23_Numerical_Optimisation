@@ -72,12 +72,12 @@ if __name__ == '__main__':
     start = np.array([0]).astype(np.longfloat)
     stop = 1e-6
 
-    f, grad_f, hess_f = task_1()
+    f, grad_f, hess_f = task_2()
 
-    x_fin, p_fin, a_fin, n_iter = steepest_descent(start, f, grad_f, print_interval=10)
-    # x_fin, p_fin, a_fin, n_iter = newtons_method(start, f, grad_f, hess_f, print_interval=10)
+    # x_fin, p_fin, a_fin, n_iter = steepest_descent(start, f, grad_f, print_interval=10)
+    x_fin, p_fin, a_fin, n_iter = newtons_method(start, f, grad_f, hess_f, print_interval=10)
     result = x_fin[-1][0]
-    true_min = -1/3
+    true_min = -1/3     # TODO: change this for every task!!
 
     print(f'final x: {result:10.7f}')
     print(f'norm f(x): {np.linalg.norm(f(result))}')

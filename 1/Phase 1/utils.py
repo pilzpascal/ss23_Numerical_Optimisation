@@ -1,7 +1,6 @@
 import numpy as np
 import sympy as sp
 from matplotlib import pyplot as plt
-import scipy
 
 
 def get_local_minima_1d(f: sp.Function, which: str = 'min') -> np.ndarray:
@@ -44,7 +43,7 @@ def get_alpha(f: callable(np.ndarray),
     :param start_a: the initial alpha value at which to start searching
     :return: scalar alpha_k; how far to go along the direction p_k
     """
-    c = 0.8
+    c = 0.99
     rho = 0.9
 
     alpha = start_a
@@ -138,40 +137,3 @@ def plot_iterations(f: callable(float),
     plt.show()
     if save:
         plt.savefig(save_name)
-
-
-def print_output(f: callable(np.ndarray),
-                 x: np.ndarray,
-                 p: np.ndarray = None,
-                 alpha: np.ndarray = None,
-                 full: bool = False):
-    """
-    Prints the given arrays
-    :param f: the function under investigation
-    :param x: list of points
-    :param p: list of directions
-    :param alpha: list of step sizes
-    :param full: whether to print full list of points or only the last
-    :return:
-    """
-
-    print('='*70)
-    print()
-    print(f'Function value at endpoint {f(x[-1])} (euclidian norm of {np.linalg.norm(f(x[-1])):.4f}).')
-    print(f'It took {len(x)-1} iterations.')
-    print()
-    print(f'Precise endpoint:    {x[-1]}')
-    print(f'True value would be: {minimum}')
-    print(f'All local minima are {local_minima}')
-    print(f'(Precise local minima are: {local_minima_precise})')
-    print(f'Distance from last iterate to true value: {np.format_float_scientific(np.linalg.norm(minimum - x[-1]), precision=6)}')
-    print()
-    print('='*70)
-    print()
-
-    if full:
-        print(f'List of x: {x}')
-    if p:
-        print(f'List of p: {p}')
-    if alpha:
-        print(f'List of alpha: {alpha}')
