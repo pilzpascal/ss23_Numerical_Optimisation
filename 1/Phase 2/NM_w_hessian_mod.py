@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.linalg import norm
-from numpy.linalg import solve
+from numpy.linalg import norm, eigh, solve, cholesky
+from numpy import maximum, diag
 
 
 def function_1() -> (callable, callable, callable):
@@ -9,6 +9,7 @@ def function_1() -> (callable, callable, callable):
     :return: func, grad, hess
     """
     def func(x: np.ndarray) -> np.ndarray:
+        """100*(x[1] - x[0]**2)**2 + (1 - x[0])**2"""
         return 100*(x[1] - x[0]**2)**2 + (1 - x[0])**2
 
     def grad(x: np.ndarray) -> np.ndarray:
@@ -27,6 +28,7 @@ def function_2() -> (callable, callable, callable):
     :return: func, grad, hess
     """
     def func(x: np.ndarray) -> np.ndarray:
+        """150*(x[0]*x[1])**2 + (0.5*x[0] + 2*x[1] - 2)**2"""
         return 150*(x[0]*x[1])**2 + (0.5*x[0] + 2*x[1] - 2)**2
 
     def grad(x: np.ndarray) -> np.ndarray:
@@ -39,12 +41,50 @@ def function_2() -> (callable, callable, callable):
     return func, grad, hess
 
 
+def eig_val_mod(hessian):
+    """
+    Modifying the hessian by doing an eigenvalue decomposition and modifying the eigenvalues until it is positive
+    definite. This is done by simply flipping the negative eigenvalues
+
+    :param hessian: hessian to be modified
+    :return: mod_hess, the modified hessian
+    """
+    eig_vals, eig_vecs = eigh(hessian)
+    mod_eig_vals = maximum(eig_vals, -eig_vals)
+    mod_hess = (eig_vecs @ diag(mod_eig_vals)) @ eig_vecs.T
+    return mod_hess
+
+
+def add_id(hessian, beta: float = 1e-3):
+    """
+    Modifying the hessian by adding a small multiple of the identity. As seen in Algorithm 3.3
+    :param hessian: the hessian to be modified
+    :param beta: 'hyperparamter' of this algorithm
+    :return: L@L.T, where L is the result of the successful cholesky decomposition
+    """
+    n = len(hessian)
+    identity = np.eye(n)
+
+    if min(diag(hessian)) > 0:
+        tau = 0
+    else:
+        tau = -min(diag(hessian)) + beta
+
+    while True:
+        try:
+            L = cholesky(hessian + identity * tau)
+            return L @ L.T.conj()
+        except np.linalg.LinAlgError:
+            tau = max(2 * tau, beta)
+
+
 def newtons_method_hessian_mod(start_point: np.ndarray,
-                   f: callable,
-                   grad_f: callable,
-                   hess_f: callable,
-                   stop_crit: float = 1e-3,
-                   print_interval: int = False) -> (np.ndarray, np.ndarray, np.ndarray):
+                               f: callable,
+                               grad_f: callable,
+                               hess_f: callable,
+                               stop_crit: float = 1e-6,
+                               print_interval: int = False,
+                               hess_modifier: callable = add_id) -> (np.ndarray, np.ndarray, np.ndarray):
 
     x_list = [start_point]
     x_k = start_point
@@ -53,8 +93,8 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
     i = 0
 
     while norm(grad_f(x_k)) > stop_crit:
-        p_k = solve(hess_f(x_k).astype(float), (-grad_f(x_k).astype(float))).reshape(-1)
-        # a_k = get_alpha(f, grad_f, x_k, p_k)
+        mod_hess = hess_modifier(hess_f(x_k))
+        p_k = solve(mod_hess.astype(float), (-grad_f(x_k).astype(float))).reshape(-1)
         a_k = 1
         x_k += a_k * p_k
 
@@ -73,5 +113,24 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
 
 
 if __name__ == "__main__":
-    start_points = np.array([[[1.2, 1.2], [-1.2, 1], [0.2, 0.8]],
-                             [[-0.2, 1.2], [3.8, 0.1], [1.9, 0.6]]])
+    start_points = {'function_1': np.array([[1.2, 1.2], [-1.2, 1], [0.2, 0.8]]),
+                    'function_2': np.array([[-0.2, 1.2], [3.8, 0.1], [1.9, 0.6]])}
+    functions = {'function_1': function_1(),
+                 'function_2': function_2()}
+
+    for function in functions:
+        f, grad_f, hess_f = functions[function]
+        print('='*70)
+        print(f'{function}: {f.__doc__}')
+        print()
+        for x_0 in start_points[function]:
+            print('-'*60)
+            print(f'starting point: {x_0}')
+            print()
+            x_fin, p_fin, a_fin, n_iter = newtons_method_hessian_mod(
+                x_0, f, grad_f, hess_f, stop_crit=1e-6, print_interval=False, hess_modifier=eig_val_mod)
+            result = x_fin[-1]
+            print(f'iterations:   {n_iter}')
+            print(f'norm of grad: {norm(grad_f(result))}')
+            print(f'endpoint:     {result}')
+            print()
