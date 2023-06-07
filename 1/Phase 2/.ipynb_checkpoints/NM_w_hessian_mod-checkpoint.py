@@ -78,7 +78,7 @@ def add_id(hessian, beta: float = 1e-3):
             tau = max(2 * tau, beta)
             
 
-def stay_same(hessian):
+def no_mod(hessian):
     """
     This just returns the hessian as it is. Like an identity function.
     :param hessian:
@@ -95,8 +95,9 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
                                print_interval: int = False,
                                hess_modifier: callable = add_id) -> (np.ndarray, np.ndarray, np.ndarray):
 
-    x_list = [start_point]
-    x_k = start_point
+    
+    x_k = start_point.copy()
+    x_list = [x_k]
     p_list = list()
     a_list = list()
     i = 0
