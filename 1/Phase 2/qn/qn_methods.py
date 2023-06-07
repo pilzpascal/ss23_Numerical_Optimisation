@@ -1,11 +1,12 @@
 import numpy as np
+import math
 from scipy.optimize import minimize
 
 from optimization import bfgs_method, sr1_method
-from problems import rosenbrock, rosenbrock_grad, rosenbrock_starting_points
-from problems import function_2, function_2_grad, function_2_starting_points
+from problems import rosenbrock, rosenbrock_grad, rosenbrock_starting_points, rosenbrock_solutions
+from problems import function_2, function_2_grad, function_2_starting_points, function_2_solutions
 
-def perform_QN(method, f, grad, starting_points, max_iter=100, epsilon=1e-6):
+def perform_QN(method, f, grad, starting_points, sol_points, max_iter=100, epsilon=1e-6):
     for i, sp in enumerate(starting_points):
         print(f"Solving Problem-{i+1}, Starting Point: {sp}")
         x0 = np.array(sp)
@@ -15,6 +16,7 @@ def perform_QN(method, f, grad, starting_points, max_iter=100, epsilon=1e-6):
         print("Optimal solution:")
         print(f"x = {x_opt}")
         print(f"norm of grad = {gnorm}")
+        print(f"distance = {math.dist(x_opt, sol_points[i])}")
         print(f"Number of iterations: {num_iters}\n")
         
 def perform_QN_scipy(f, starting_points, max_iter=100, epsilon=1e-6):
@@ -31,16 +33,15 @@ def perform_QN_scipy(f, starting_points, max_iter=100, epsilon=1e-6):
 
 print("<Quasi Newton Method for the Rosenbrock function>")
 print("BFGS"+"-"*50)
-perform_QN(bfgs_method, rosenbrock, rosenbrock_grad, rosenbrock_starting_points)
+perform_QN(bfgs_method, rosenbrock, rosenbrock_grad, rosenbrock_starting_points, rosenbrock_solutions)
 print("SR1-" + "-"*50)
-perform_QN(sr1_method, rosenbrock, rosenbrock_grad, rosenbrock_starting_points)
+perform_QN(sr1_method, rosenbrock, rosenbrock_grad, rosenbrock_starting_points, rosenbrock_solutions)
 
 print("\n\n")
 
 print("<Quasi Newton Method for the second Function>")
 print("BFGS"+"-"*50)
-perform_QN(bfgs_method, function_2, function_2_grad, function_2_starting_points)
+perform_QN(bfgs_method, function_2, function_2_grad, function_2_starting_points, function_2_solutions)
 print("SR1-" + "-"*50)
-perform_QN(sr1_method, function_2, function_2_grad, function_2_starting_points)
-
+perform_QN(sr1_method, function_2, function_2_grad, function_2_starting_points, function_2_solutions)
 #perform_QN_scipy(rosenbrock, rosenbrock_starting_points)
