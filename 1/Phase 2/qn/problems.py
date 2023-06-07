@@ -16,3 +16,7 @@ def function_2_grad(x: np.ndarray) -> np.ndarray:
 # Define the starting points
 rosenbrock_starting_points = [(1.2, 1.2), (-1.2, 1), (0.2, 0.8)]
 function_2_starting_points = [(-0.2, 1.2), (3.8, 0.1), (1.9, 0.6)]
+
+# Define solutions
+rosenbrock_solutions = [(1,1), (1,1), (1,1)]
+function_2_solutions = [(4,0), (4,0), (4,0)]
