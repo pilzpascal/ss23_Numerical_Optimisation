@@ -76,6 +76,15 @@ def add_id(hessian, beta: float = 1e-3):
             return L @ L.T.conj()
         except np.linalg.LinAlgError:
             tau = max(2 * tau, beta)
+            
+
+def no_mod(hessian):
+    """
+    This just returns the hessian as it is. Like an identity function.
+    :param hessian:
+    :return: hessian
+    """
+    return hessian
 
 
 def newtons_method_hessian_mod(start_point: np.ndarray,
