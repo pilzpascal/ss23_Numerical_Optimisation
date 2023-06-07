@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import norm
 from scipy.optimize import line_search
 import warnings
 
@@ -37,7 +38,7 @@ def bfgs_method(f, grad, x0, max_iter=100, epsilon=1e-6):
         
         iter_count += 1
     
-    return xk, f(xk), iter_count
+    return xk, norm(grad(xk)), iter_count
 
 def sr1_method(f, grad, x0, max_iter=100, epsilon=1e-6):
     """Quasi-Newton method implementation with SR1 update."""
@@ -77,5 +78,5 @@ def sr1_method(f, grad, x0, max_iter=100, epsilon=1e-6):
 
         iter_count += 1
 
-    return xk, f(xk), iter_count
+    return xk, norm(grad(xk)), iter_count
     

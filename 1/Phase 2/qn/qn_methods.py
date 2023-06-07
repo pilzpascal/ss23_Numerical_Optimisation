@@ -10,11 +10,11 @@ def perform_QN(method, f, grad, starting_points, max_iter=100, epsilon=1e-6):
         print(f"Solving Problem-{i+1}, Starting Point: {sp}")
         x0 = np.array(sp)
         
-        x_opt, f_opt, num_iters = method(f, grad, x0, max_iter, epsilon)
+        x_opt, gnorm, num_iters = method(f, grad, x0, max_iter, epsilon)
         
         print("Optimal solution:")
         print(f"x = {x_opt}")
-        print(f"f(x) = {f_opt}")
+        print(f"norm of grad = {gnorm}")
         print(f"Number of iterations: {num_iters}\n")
         
 def perform_QN_scipy(f, starting_points, max_iter=100, epsilon=1e-6):
