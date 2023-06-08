@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.linalg import norm, eigh, solve, cholesky
 from numpy import maximum, diag
+from backtracking import backtracking
 
 
 def function_1() -> (callable, callable, callable):
@@ -105,7 +106,7 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
     while norm(grad_f(x_k)) > stop_crit:
         mod_hess = hess_modifier(hess_f(x_k))
         p_k = solve(mod_hess.astype(float), (-grad_f(x_k).astype(float))).reshape(-1)
-        a_k = 1
+        a_k = backtracking(f, grad_f(x_k), x_k, p_k)
         x_k += a_k * p_k
 
         if print_interval and i % print_interval == 0:
