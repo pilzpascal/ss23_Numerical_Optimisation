@@ -93,7 +93,7 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
                                f: callable,
                                grad_f: callable,
                                hess_f: callable,
-                               max_iter: float = 1e4,
+                               max_iter: float = 1e5,
                                stop_crit: float = 1e-6,
                                hess_modifier: callable = add_id) -> (np.ndarray, np.ndarray, np.ndarray):
 
@@ -107,8 +107,8 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
 
     while norm(grad_k) > stop_crit:
         if i == max_iter:
-            print('Max iteration reached!')
             return np.array(x_list), np.array(p_list), np.array(a_list), i
+
         mod_hess = hess_modifier(hess_f(x_k))
 
         p_k = solve(mod_hess.astype(float), (-grad_k.astype(float))).reshape(-1)
