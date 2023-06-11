@@ -52,13 +52,12 @@ def sr1_method(f, grad, x0, max_iter=10000, epsilon=1e-6, _rho=0.75, c=0.0001):
     xk = np.array(x0)
     gk = grad(xk)
 
-    Bk = np.eye(len(xk))  # Initial inverse Hessian approximation as identity matrix
+    Hk = np.eye(len(xk))  # Initial inverse Hessian approximation as identity matrix
 
     iter_count = 0
-    # alpha = 0
     while np.linalg.norm(gk) > epsilon and iter_count < max_iter:
 
-        pk = -np.dot(np.linalg.inv(Bk), gk)
+        pk = -Hk @ gk
 
         alpha = backtracking(f, gk, xk, pk, rho=_rho, c=c)
 
@@ -67,18 +66,17 @@ def sr1_method(f, grad, x0, max_iter=10000, epsilon=1e-6, _rho=0.75, c=0.0001):
         xk = xk + alpha * pk
         gk = grad(xk)
 
-
         # Compute difference in x and gradient
         sk = xk - xk_prev
         yk = gk - gk_prev
 
-        intermediate = yk - np.dot(Bk, sk)
+        intermediate = sk - np.dot(Hk, yk)
         # SR1 update for Hessian approximation
-        if np.abs(np.dot(sk, intermediate)) < (1e-8 * np.linalg.norm(sk) * np.linalg.norm(intermediate)):
+        if np.abs(np.dot(yk, intermediate)) < (1e-8 * np.linalg.norm(yk) * np.linalg.norm(intermediate)):
             pass
         elif intermediate.T @ sk != 0:
-            Bk = Bk + (np.outer(intermediate, intermediate) / np.dot(intermediate, sk))
-        elif (yk == Bk@sk).all():
+            Hk = Hk + (np.outer(intermediate, intermediate) / np.dot(intermediate, yk))
+        elif (sk == (Hk@yk)).all():
             pass
 
         iter_count += 1
