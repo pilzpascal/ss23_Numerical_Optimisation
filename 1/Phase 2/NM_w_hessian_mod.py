@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import norm, eigh, solve, cholesky
 from numpy import maximum, diag
 from backtracking import backtracking
+from task6_func import function_3
 
 
 def function_1() -> (callable, callable, callable):
@@ -92,32 +93,32 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
                                f: callable,
                                grad_f: callable,
                                hess_f: callable,
+                               max_iter: float = 1e4,
                                stop_crit: float = 1e-6,
-                               print_interval: int = False,
                                hess_modifier: callable = add_id) -> (np.ndarray, np.ndarray, np.ndarray):
 
-    
     x_k = start_point.copy()
     x_list = [x_k]
     p_list = list()
     a_list = list()
+    grad_k = grad_f(x_k)
+
     i = 0
 
-    while norm(grad_f(x_k)) > stop_crit:
+    while norm(grad_k) > stop_crit:
+        if i == max_iter:
+            print('Max iteration reached!')
+            return np.array(x_list), np.array(p_list), np.array(a_list), i
         mod_hess = hess_modifier(hess_f(x_k))
-        p_k = solve(mod_hess.astype(float), (-grad_f(x_k).astype(float))).reshape(-1)
-        a_k = backtracking(f, grad_f(x_k), x_k, p_k)
-        x_k += a_k * p_k
 
-        if print_interval and i % print_interval == 0:
-            try:
-                print(f'Iteration {i:7d}: alpha={a_k:8.7f}, norm_grad={norm(p_k):8.7f}, '
-                      f'change_norm_grad={norm(p_list[-1]) - norm(p_k):10.7f}')
-            except IndexError:
-                print(f'Iteration {i:7d}: alpha={a_k:8.7f}, norm_grad={norm(p_k):8.7f}')
-            p_list.append(p_k)
-            a_list.append(a_k)
-            x_list.append(x_k)
+        p_k = solve(mod_hess.astype(float), (-grad_k.astype(float))).reshape(-1)
+        a_k = backtracking(f, grad_k, x_k, p_k, alpha_k=1)
+        x_k += a_k * p_k
+        grad_k = grad_f(x_k)
+
+        p_list.append(p_k)
+        a_list.append(a_k)
+        x_list.append(x_k)
         i += 1
 
     return np.array(x_list), np.array(p_list), np.array(a_list), i
@@ -125,9 +126,11 @@ def newtons_method_hessian_mod(start_point: np.ndarray,
 
 if __name__ == "__main__":
     start_points = {'function_1': np.array([[1.2, 1.2], [-1.2, 1], [0.2, 0.8]]),
-                    'function_2': np.array([[-0.2, 1.2], [3.8, 0.1], [1.9, 0.6]])}
+                    'function_2': np.array([[-0.2, 1.2], [3.8, 0.1], [1.9, 0.6]]),
+                    'function_3': np.array([[1., -1.]])}
     functions = {'function_1': function_1(),
-                 'function_2': function_2()}
+                 'function_2': function_2(),
+                 'function_3': function_3()}
 
     for function in functions:
         f, grad_f, hess_f = functions[function]
