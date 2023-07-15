@@ -11,7 +11,7 @@ def function_1() -> (callable, callable, callable):
     :return: func, grad, hess
     """
     def func(x: np.ndarray) -> np.ndarray:
-        """100*(x[1] - x[0]**2)**2 + (1 - x[0])**2"""
+        """100(x_2 - x_1^2)^2 + (1 - x_1)^2"""
         return 100*(x[1] - x[0]**2)**2 + (1 - x[0])**2
 
     def grad(x: np.ndarray) -> np.ndarray:
@@ -30,7 +30,7 @@ def function_2() -> (callable, callable, callable):
     :return: func, grad, hess
     """
     def func(x: np.ndarray) -> np.ndarray:
-        """150*(x[0]*x[1])**2 + (0.5*x[0] + 2*x[1] - 2)**2"""
+        """150(x_1 x_2)^2 + (0.5 x_1 + 2 x_2 - 2)^2"""
         return 150*(x[0]*x[1])**2 + (0.5*x[0] + 2*x[1] - 2)**2
 
     def grad(x: np.ndarray) -> np.ndarray:
