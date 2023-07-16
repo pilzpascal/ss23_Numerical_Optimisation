@@ -8,32 +8,21 @@ import numpy as np
 import warnings
 from problems import get_problems
 from utils import rnd_vec_l1_norm
+from utils import transform_problem_to_qp_form
 
 
 class ActiveSet:
     def __init__(self, tol=1e-8):
         self.tol = tol
 
-    def _init_vars(self):
-        self.neq = 0                    # number of equality constraints
-        self.nineq = 0                  # number of inequality constraints
-        self.G = np.ndarray             # objective function quadratic coefficient matrix
-        self.c = np.ndarray             # objective function linear coefficient vector
-        self.A = np.ndarray             # constraint coefficient matrix
-        self.b = np.ndarray             # constraint target vector
-        self.act_idx = np.ndarray         # indices of active constraints
-
-    def _prep_inputs(self, G, c, A, b, neq, nineq):
-        # initialize instance variables
-        self._init_vars()
-        # objective coefficients
-        self.G = G
-        self.c = c
-        # constraint coefficients
-        self.A = A
-        self.b = b
-        self.neq = neq
-        self.nineq = nineq
+    def _init_vars(self, G, c, A, b, neq, nineq, x0):
+        self.neq = neq              # number of equality constraints
+        self.nineq = nineq          # number of inequality constraints
+        self.G = G                  # objective function quadratic coefficient matrix
+        self.c = c                  # objective function linear coefficient vector
+        self.A = A                  # constraint coefficient matrix
+        self.b = b                  # constraint target vector
+        self._init_active_set(x0)
 
     def _init_active_set(self, x0):
         # equality constraints always in active set.
@@ -76,13 +65,9 @@ class ActiveSet:
         # remove the constraint index
         self.act_idx = np.delete(self.act_idx, idx, axis=0)
 
-    def _solve_as_kkt(self, x):
-        # check if there are no constraints active
-        g = self._calc_grad(x)
+    def _build_kkt_system(self, x):
         n_active = len(self.act_idx)
-        if n_active == 0:
-            p = np.linalg.solve(self.G, -g)
-            return p, []
+        g = self._calc_grad(x)
         # construct the KKT system
         active_cons = self.A[self.act_idx.astype(int)].reshape(-1, self.A.shape[1])
         # constructing the left side
@@ -93,10 +78,73 @@ class ActiveSet:
         # constructing the right side
         right_side = np.zeros(shape=(left_side.shape[0], 1))
         right_side[:self.G.shape[1]] = -g.reshape(-1, 1)
+        return left_side, right_side
+
+    def _solve_as_kkt(self, x):
+        g = self._calc_grad(x)
+        if len(self.act_idx) == 0:
+            p = np.linalg.solve(self.G, -g)
+            return p, []
+        # check if there are no constraints active
+        left_side, right_side = self._build_kkt_system(x)
         # solve the KKT system
         pk_lambda = np.linalg.solve(left_side, right_side)
         # return new direction and lagrangian multipliers
         return pk_lambda[:self.G.shape[1]].flatten(), pk_lambda[self.G.shape[1]:]
+
+    def _null_space_as_kkt(self, x):
+        # check if there are no constraints active
+        g = self._calc_grad(x)
+        m = len(self.act_idx)
+        if m == 0:
+            p = np.linalg.solve(self.G, -g)
+            return p, []
+        left_side, right_side = self._build_kkt_system(x)
+        # number of variables
+        n = self.A.shape[1]
+        # active constraint vector is set to zero
+        b = np.zeros(shape=(m, 1))
+        # calculate active set Hessian vector
+        h = self._calc_as_Hessian_vector(x)
+        # use QR decomposition of active constraint matrix (transpose)
+        Q, R = np.linalg.qr(self.AC_KKT[:self.H.shape[0], self.H.shape[1]:], 'complete')
+        # trim full R to get n x n upper diagonal form
+        R = R[:m]
+        # calculate the step direction vector:
+        #   p = Qr * py + Qn * pz
+        py = np.linalg.solve(R, b)
+        # split Q into null and range spaces
+        Qr = Q[:, :m]
+        p = np.dot(Qr, py)
+        # compute null space portion if the number of variables
+        # is greater than the number of active constraints
+        if n > m:
+            Qn = Q[:, m:]
+            Qnt = Qn.T
+            # compute Cholesky decomposition for reduced Hessian
+            Hz = np.linalg.multi_dot([Qnt, self.H, Qn])
+            L = np.linalg.cholesky(Hz)
+            # compute null space target vector
+            hz = np.dot(Qnt, np.linalg.multi_dot([self.H, Qr, py]) + h)
+            pz = np.linalg.solve(L.T, np.linalg.solve(L, hz))
+            # update step direction
+            p += np.dot(Qn, pz)
+        # compute Lagrangians
+        l = np.linalg.solve(R, np.dot(Qr.T, np.dot(self.H, -p) + h))
+        return p, l
+
+    def _solve_using_numpy(self, x):
+        left_side, right_side = self._build_kkt_system(x)
+        pk_lambda, res, rank, s = np.linalg.lstsq(left_side, right_side)
+        return pk_lambda[:self.G.shape[1]].flatten(), pk_lambda[self.G.shape[1]:]
+
+    def _calc_dir(self, x):
+        try:
+            p, l = self._solve_as_kkt(x)
+        except:
+            p, l = self._solve_using_numpy(x)
+            # p, l = self._null_space_as_kkt(x)
+        return p, l
 
     def _calc_step_length(self, x, p):
         # constraint indices
@@ -135,14 +183,14 @@ class ActiveSet:
         :param stop_crit: stopping criterion for the gradient of the objective function
         :return:
         """
-        self._prep_inputs(G, c, A, b, neq, nineq)
+        self._init_vars(G, c, A, b, neq, nineq, x0)
         if not self._is_feasible(x0):
             raise ValueError(f'ActiveSet: supplied x0 {x0} is infeasible')
-        self._init_active_set(x0)
+
         cur_x = x0
         n_iterations = 0
         while np.any(abs(self._calc_grad(cur_x)) > stop_crit):
-            p, l = self._solve_as_kkt(cur_x)
+            p, l = self._calc_dir(cur_x)
             len_p = np.linalg.norm(p)
             if np.isclose(len_p, 0, rtol=0, atol=self.tol):
                 if l.shape[0] == self.neq:
@@ -163,27 +211,14 @@ class ActiveSet:
 
 
 if __name__ == '__main__':
-    """
-    problems = get_problems()
-    for problem in problems:
-        M = problem['M']
-        y = problem['y']
-        m, n = M.shape
-        G_prob = M.T @ M
-        c_prob = M.T @ y
-        A_prob = -np.ones(n)
-        b_prob = -np.ones(m)
-
-        x0_inp = rnd_vec_l1_norm(n)
-        beta_plus = np.maximum(x0_inp, 0)
-        beta_minus = np.macimum(-x0_inp, 0)
-    """
     active_set = ActiveSet()
-    results = active_set.run(G=np.array([[2, 0], [0, 2]]),
-                             c=np.array([-4, -4]),
-                             A=np.array([[1, 1], [1, -2], [-1, -1], [-2, 1]]),
-                             b=np.array([2, 2, 1, 2]),
-                             x0=np.array([0.5, 1]),
+    problem = get_problems()[0]
+    G, c, A, b = transform_problem_to_qp_form(problem['M'], problem['y'])
+    results = active_set.run(G=G,
+                             c=c,
+                             A=A,
+                             b=b,
+                             x0=np.array([0, 0, 0, 0]),
                              neq=0,
                              nineq=4)
     print(results)
